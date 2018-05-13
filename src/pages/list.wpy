@@ -1,0 +1,52 @@
+<template>
+  <view class="container">
+    <view class="slider">
+      <swiper indicator-dots="{{indicatorDots}}" autoplay="{{autoplay}}" interval="{{interval}}" circular="{{circular}}">
+        <block wx:for="{{imgUrls}}">
+          <swiper-item>
+            <image src="{{item}}" class="slide-image" width="355" height="150" />
+          </swiper-item>
+        </block>
+      </swiper>
+    </view>
+  </view>
+</template>
+
+<script>
+ import wepy from 'wepy'
+import api from '../api/api';
+export default class List extends wepy.page {
+  data = {
+    imgUrls: [],
+    indicatorDots: true,
+    autoplay: true,
+    interval: 4000,
+    circular: true
+  };
+  // getList(){
+  //   wepy.request('http://t.yushu.im/v2/movie/in_theaters').then(data=>{
+  //     console.log(data);
+  //   })
+  // }
+//   getSlider() {
+//    api.inTheaters().then(data=>{
+// console.log(data);
+//     });
+//   }
+   async getSlider() {
+   let data=await api.comingSoon({
+     query:{
+count:3
+     }
+   });
+console.log(data);
+
+  }
+  onLoad() {
+this.getSlider();
+  }
+}
+</script>
+<style lang='less'>
+
+</style>
