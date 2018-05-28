@@ -1,0 +1,29 @@
+ <template name="movie-list">
+   <block wx:for="{{board}}" wx:key="key">
+      <navigator url="/pages/detail?id={{item.id}}&title={{item.title}}">
+
+        <view class="list">
+          <view class="list-left">
+            <image class="film-cover" src="{{item.images.large}}" />
+            <view class="descripe">
+              <text class="film-title">{{item.title}}</text>
+              <text class="film-time">{{item.year}}</text>
+              <text class="film-director">{{item.directors[0].name}}</text>
+            </view>
+          </view>
+          <view class="list-right">
+            <text class="film-score">{{item.rating.average}}</text>
+          </view>
+        </view>
+      </navigator>
+    </block>
+    <view class="tips">
+      <view class="tips-item" wx:if="{{ hasMore }}">
+        <image class="tips-img" src="/images/loading.gif" mode="aspectFill" />
+        <text>玩了命的加载中...</text>
+      </view>
+      <view class="tips-item" wx:else>
+        <text>没有更多内容了</text>
+      </view>
+    </view>
+    </template>

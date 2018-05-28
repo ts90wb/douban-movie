@@ -1,40 +1,8 @@
 <template>
   <view class="container">
-    <view class="slider">
-      <swiper class="swiper" indicator-dots="{{indicatorDots}}" bindchange="dotChange" autoplay="{{autoplay}}" interval="{{interval}}" circular="{{circular}}">
-        <block wx:for="{{newArr}}" wx:key="key">
-          <swiper-item class="swiper-item">
-            <image src="{{item[0].images.large}}" class="slide-image" width="270" height="378" />
-            <image src="{{item[1].images.large}}" class="slide-image" width="270" height="378" />
-          </swiper-item>
-        </block>
-      </swiper>
-      <view class="dot-container">
-        <block wx:for="{{newArr}}" wx:key="key">
-          <view class="dot{{index==dotCurrent?'active':''}}"></view>
-        </block>
-      </view>
-    </view>
-    <view class="board">
-<view class="b-indicator">
-  <view class="indicator-title">
-  <text>正在热映</text>
-  <text class="iconfont icon-arrow"></text>
-  </view>
-  <view class="indicator-content-wrapper">
-  <view class="indicator-content">
-          <block wx:for="{{subjects}}" wx:key="key">
-          <swiper-item class="swiper-item">
-            <image src="{{item.images.large}}" class="slide-image" width="270" height="378" />
-  <text>正在热映</text>
-          </swiper-item>
-        </block>
+    <import src="../common/movie-list.wxml" />
+    <template is="movie-list" data="{{hasMore,board}}" />
 
-  </view>
-  </view>
-
-</view>
-    </view>
   </view>
 
 </template>
@@ -44,104 +12,182 @@ import wepy from 'wepy';
 import api from '../api/api';
 export default class List extends wepy.page {
   data = {
-    subjects: [],
-    newArr: [],
-    indicatorDots: false,
-    autoplay: true,
-    interval: 4000,
-    circular: true,
-    dotCurrent: 0
+    title: '榜单',
+    type: '',
+    board: [],
+    page: 1,
+    size: 7,
+    hasMore: true
   };
-
-  // getList(){
-  //   wepy.request('http://t.yushu.im/v2/movie/in_theaters').then(data=>{
-  //     console.log(data);
-  //   })
-  // }
-  //   getSlider() {
-  //    api.inTheaters().then(data=>{
-  // console.log(data);
-  //     });
-  //   }
-  subGroup() {
-    let midArr = [];
-    this.subjects.forEach((item, index) => {
-      midArr.push(item);
-      if (index % 2 == 1) {
-        this.newArr.push(midArr);
-        midArr = [];
-      }
+  loadMore() {
+    if (!this.hasMore) return;
+    wx.showLoading({
+      title: '加载中...'
     });
-    this.$apply();
-    console.log(this.newArr);
+    this.page++;
+    this.getBoard()
+      .then(res => {
+        if (res.length) {
+          this.board = this.board.concat(res);
+          this.$apply();
+        } else {
+          this.hasMore = false;
+          this.$apply();
+        }
+        wx.hideLoading();
+      })
+      .catch(err => {
+        console.log(err);
+        wx.hideLoading();
+      });
   }
-  //改变dot的激活点
-  dotChange(e) {
-    this.dotCurrent = e.detail.current;
-  }
-  async getSlider() {
-    let res = await api.comingSoon({
-      query: {
-        count: 6
-      }
+  async getBoard() {
+    wx.showLoading({
+      title: '加载中...'
     });
-    this.subjects = res.data.subjects;
-    this.$apply();
-    this.subGroup();
+    const totalBoard = await api.totalBoard(
+      {
+        query: {
+          start: (this.page - 1) * this.size,
+          count: this.size
+        }
+      },
+      this.type
+    );
+    return totalBoard.data.subjects;
   }
-  onLoad() {
-    this.getSlider();
+  onReady() {
+    wx.setNavigationBarTitle({
+      title: '豆瓣*' + this.title
+    });
+  }
+  onLoad(options) {
+    this.title = options.title;
+    this.type = options.type;
+    this.getBoard()
+      .then(res => {
+        this.board = res;
+        this.$apply();
+      })
+      .catch(err => {
+        console.log(err);
+      });
+    wx.hideLoading();
+  }
+  onPullDownRefresh() {
+    console.log(1);
+  }
+  onReachBottom() {
+    this.loadMore();
   }
 }
 </script>
 <style lang='less'>
-@font-face {font-family: "iconfont";
+@font-face {
+  font-family: 'iconfont';
   src: url('../font/iconfont.eot?t=1526399140409'); /* IE9*/
-  src: url('../font/iconfont.eot?t=1526399140409#iefix') format('embedded-opentype'), /* IE6-IE8 */
-  url('data:application/x-font-woff;charset=utf-8;base64,d09GRgABAAAAAAUMAAsAAAAAB2gAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABHU1VCAAABCAAAADMAAABCsP6z7U9TLzIAAAE8AAAARAAAAFZW7kf2Y21hcAAAAYAAAABcAAABhplkBr5nbHlmAAAB3AAAAUAAAAFQdVeq/WhlYWQAAAMcAAAALwAAADYRYYdGaGhlYQAAA0wAAAAcAAAAJAfeA4RobXR4AAADaAAAAAwAAAAMC+kAAGxvY2EAAAN0AAAACAAAAAgAdgCobWF4cAAAA3wAAAAfAAAAIAESAF1uYW1lAAADnAAAAUUAAAJtPlT+fXBvc3QAAATkAAAAJwAAADhUX1fueJxjYGRgYOBikGPQYWB0cfMJYeBgYGGAAJAMY05meiJQDMoDyrGAaQ4gZoOIAgCKIwNPAHicY2Bk/sE4gYGVgYOpk+kMAwNDP4RmfM1gxMjBwMDEwMrMgBUEpLmmMDgwVDzjZm7438AQw9zI0AAUZgTJAQAkOAx4eJzFkMENgDAMAy9t6YMyCA8G4sUcnbhrFBPKgwlqybHiWEoUYAGieIgJ7MJ4cMo19yOr+8kzWWoEaiu9q/9UEc2ya1DJTIPNW/3H5nUfnb5CHdSJrbwk3GlHC7t4nCWPP07DMBxG/bPJv5I41EmcxGnaJqE1qFCpIaQDol1YQAxITIxMICFYuzCUAYmBgYkDICQu0SN05QAIboEUCOLTW77tPaQg9PNBFiRADtpAI3SAThACdQApxTEkshjiAXiJ4vkuJTKTiZalQ7IPfqq6PC+Lvq9qqg0U2rCT5KUcYgm7xQTvQc5jgDASp6zXYuQJGoFs31dH+AW8TtayJ9vV4dbUzbuOPjMZCxl71FVF0TFesSlc+9xQjIZavSq28BadTdwBM5Ti+MzqRuz8obiJe74BMJ+DE3Xp27QpmjW3gjss1NYsPRBWtu7C7Gs1cMy4/4nqQd06J5zcoQghB7ir/XuXY3/sQVlIGPWzlAL/hmfTrC4MreFRxwQdlvUdWE3qGRopqisrpdWlEYZ/3bXEkqYWvJu2EOgXsnYzUnicY2BkYGAA4n2anB7x/DZfGbhZGEDguqLiEgT9v4GFgbkRyOVgYAKJAgDtzwh0AHicY2BkYGBu+N/AEMPCAAJAkpEBFTADAEcJAmwEAAAAA+kAAAQAAAAAAAAAAHYAqHicY2BkYGBgZghkYGUAASYg5gJCBob/YD4DABD3AXAAeJxlj01OwzAQhV/6B6QSqqhgh+QFYgEo/RGrblhUavdddN+mTpsqiSPHrdQDcB6OwAk4AtyAO/BIJ5s2lsffvHljTwDc4Acejt8t95E9XDI7cg0XuBeuU38QbpBfhJto41W4Rf1N2MczpsJtdGF5g9e4YvaEd2EPHXwI13CNT+E69S/hBvlbuIk7/Aq30PHqwj7mXle4jUcv9sdWL5xeqeVBxaHJIpM5v4KZXu+Sha3S6pxrW8QmU4OgX0lTnWlb3VPs10PnIhVZk6oJqzpJjMqt2erQBRvn8lGvF4kehCblWGP+tsYCjnEFhSUOjDFCGGSIyujoO1Vm9K+xQ8Jee1Y9zed0WxTU/3OFAQL0z1xTurLSeTpPgT1fG1J1dCtuy56UNJFezUkSskJe1rZUQuoBNmVXjhF6XNGJPyhnSP8ACVpuyAAAAHicY2BigAAuBuyAmZGJkZmRhYGxgquqND8rMzGvJL+UgQEAK3YE9wA=') format('woff'),
-  url('../font/iconfont.ttf?t=1526399140409') format('truetype'), /* chrome, firefox, opera, Safari, Android, iOS 4.2+*/
-  url('../font/iconfont.svg?t=1526399140409#iconfont') format('svg'); /* iOS 4.1- */
+  src: url('../font/iconfont.eot?t=1526399140409#iefix')
+      format('embedded-opentype'),
+    /* IE6-IE8 */
+      url('data:application/x-font-woff;charset=utf-8;base64,d09GRgABAAAAAAUMAAsAAAAAB2gAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABHU1VCAAABCAAAADMAAABCsP6z7U9TLzIAAAE8AAAARAAAAFZW7kf2Y21hcAAAAYAAAABcAAABhplkBr5nbHlmAAAB3AAAAUAAAAFQdVeq/WhlYWQAAAMcAAAALwAAADYRYYdGaGhlYQAAA0wAAAAcAAAAJAfeA4RobXR4AAADaAAAAAwAAAAMC+kAAGxvY2EAAAN0AAAACAAAAAgAdgCobWF4cAAAA3wAAAAfAAAAIAESAF1uYW1lAAADnAAAAUUAAAJtPlT+fXBvc3QAAATkAAAAJwAAADhUX1fueJxjYGRgYOBikGPQYWB0cfMJYeBgYGGAAJAMY05meiJQDMoDyrGAaQ4gZoOIAgCKIwNPAHicY2Bk/sE4gYGVgYOpk+kMAwNDP4RmfM1gxMjBwMDEwMrMgBUEpLmmMDgwVDzjZm7438AQw9zI0AAUZgTJAQAkOAx4eJzFkMENgDAMAy9t6YMyCA8G4sUcnbhrFBPKgwlqybHiWEoUYAGieIgJ7MJ4cMo19yOr+8kzWWoEaiu9q/9UEc2ya1DJTIPNW/3H5nUfnb5CHdSJrbwk3GlHC7t4nCWPP07DMBxG/bPJv5I41EmcxGnaJqE1qFCpIaQDol1YQAxITIxMICFYuzCUAYmBgYkDICQu0SN05QAIboEUCOLTW77tPaQg9PNBFiRADtpAI3SAThACdQApxTEkshjiAXiJ4vkuJTKTiZalQ7IPfqq6PC+Lvq9qqg0U2rCT5KUcYgm7xQTvQc5jgDASp6zXYuQJGoFs31dH+AW8TtayJ9vV4dbUzbuOPjMZCxl71FVF0TFesSlc+9xQjIZavSq28BadTdwBM5Ti+MzqRuz8obiJe74BMJ+DE3Xp27QpmjW3gjss1NYsPRBWtu7C7Gs1cMy4/4nqQd06J5zcoQghB7ir/XuXY3/sQVlIGPWzlAL/hmfTrC4MreFRxwQdlvUdWE3qGRopqisrpdWlEYZ/3bXEkqYWvJu2EOgXsnYzUnicY2BkYGAA4n2anB7x/DZfGbhZGEDguqLiEgT9v4GFgbkRyOVgYAKJAgDtzwh0AHicY2BkYGBu+N/AEMPCAAJAkpEBFTADAEcJAmwEAAAAA+kAAAQAAAAAAAAAAHYAqHicY2BkYGBgZghkYGUAASYg5gJCBob/YD4DABD3AXAAeJxlj01OwzAQhV/6B6QSqqhgh+QFYgEo/RGrblhUavdddN+mTpsqiSPHrdQDcB6OwAk4AtyAO/BIJ5s2lsffvHljTwDc4Acejt8t95E9XDI7cg0XuBeuU38QbpBfhJto41W4Rf1N2MczpsJtdGF5g9e4YvaEd2EPHXwI13CNT+E69S/hBvlbuIk7/Aq30PHqwj7mXle4jUcv9sdWL5xeqeVBxaHJIpM5v4KZXu+Sha3S6pxrW8QmU4OgX0lTnWlb3VPs10PnIhVZk6oJqzpJjMqt2erQBRvn8lGvF4kehCblWGP+tsYCjnEFhSUOjDFCGGSIyujoO1Vm9K+xQ8Jee1Y9zed0WxTU/3OFAQL0z1xTurLSeTpPgT1fG1J1dCtuy56UNJFezUkSskJe1rZUQuoBNmVXjhF6XNGJPyhnSP8ACVpuyAAAAHicY2BigAAuBuyAmZGJkZmRhYGxgquqND8rMzGvJL+UgQEAK3YE9wA=')
+      format('woff'),
+    url('../font/iconfont.ttf?t=1526399140409') format('truetype'),
+    /* chrome, firefox, opera, Safari, Android, iOS 4.2+*/
+      url('../font/iconfont.svg?t=1526399140409#iconfont') format('svg'); /* iOS 4.1- */
 }
 
 .iconfont {
-  font-family:"iconfont" !important;
-  font-size:16px;
-  font-style:normal;
+  font-family: 'iconfont' !important;
+  font-size: 16px;
+  font-style: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.icon-arrow:before { content: "\e60b"; }
-.slider {
-  position: relative;
-  .swiper {
+.icon-arrow:before {
+  content: '\e60b';
+}
+page {
+  height: 100%;
+}
+.container {
+  background: #eee;
+  .list {
+    display: flex;
     width: 100%;
-    height: 500rpx;
-    .swiper-item {
+    margin-bottom: 20rpx;
+    padding: 0 20rpx;
+    box-sizing: border-box;
+    box-shadow: 2rpx 2rpx 4rpx rgba(0, 0, 0, 0.2);
+    justify-content: space-between;
+    border-top: 2rpx solid #ddd;
+    background: #fff;
+    .list-left {
       display: flex;
-      width: 100%;
-      .slide-image {
-        width: 50%;
-        height: auto;
+      height: 350rpx;
+      align-items: center;
+      .film-cover {
+        width: 200rpx;
+        height: 300rpx;
+      }
+      .descripe {
+        display: flex;
+        width: 400rpx;
+        height: 300rpx;
+        margin-left: 20rpx;
+        flex-direction: column;
+        .film-title {
+          font-size: 36rpx;
+          height: 80rpx;
+          line-height: 80rpx;
+          font-weight: 600;
+          color: #555;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .film-time {
+          height: 80rpx;
+          line-height: 80rpx;
+          color: #666;
+        }
+        .film-director {
+          height: 80rpx;
+          line-height: 80rpx;
+          color: #999;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+    .list-right {
+      display: flex;
+      height: 300rpx;
+      align-items: center;
+      .film-score {
+        width: 60rpx;
+        height: 60rpx;
+        background: rgb(29, 191, 255);
+        border-radius: 10rpx;
+        text-align: center;
+        line-height: 60rpx;
+        color: #fff;
+        font-weight: 600;
       }
     }
   }
-  .dot-container {
+  .tips {
     width: 100%;
-    position: absolute;
-    bottom: 20rpx;
-    display: flex;
-    justify-content: center;
-    .dot {
-      height: 10rpx;
-      width: 50rpx;
-      background: rgba(0, 0, 0, 0.4);
-      margin-left: 10rpx;
+    height: 40rpx;
+    .tips-item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-    .dotactive {
-      height: 10rpx;
-      width: 50rpx;
-      background: #fff;
+    .tips-img {
+      height: 40rpx;
+      width: 40rpx;
     }
   }
 }

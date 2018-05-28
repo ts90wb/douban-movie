@@ -1,13 +1,169 @@
 <template>
+  <view class="container">
 
+    <input class="input" confirm-type="search" bindchange="getInputValue" placeholder="在这里输入搜索内容" placeholder-style="color:#bbb" focus="{{autoFocus}}" />
+    <import src="../common/movie-list.wxml" />
+    <template is="movie-list" data="{{hasMore,board}}" />
+
+  </view>
 </template>
 
 <script>
- import wepy from 'wepy'
+import wepy from 'wepy';
+import api from '../api/api';
 export default class Search extends wepy.page {
+  config={
+          navigationBarTitleText: '豆瓣电影*搜索'
 
+  }
+  data = {
+    title: '',
+    hasMore: false,
+    board: [],
+    autoFocus: true,
+    inputValue: '',
+    page:0,
+    size:7
+  };
+
+  getInputValue(e) {
+    this.inputValue = e.detail.value;
+    this.board=[];
+    this.page=0;
+    this.hasMore=true;
+    this.loadMore();
+  }
+  loadMore(){
+    if(!this.hasMore)return;
+      wx.showLoading({title:'加载中...'});
+      this.page++;
+      this.getSearchList(this.inputValue).then(res=>{
+        if(res.length){
+          this.board=this.board.concat(res);
+          this.$apply();
+        }else{
+          this.hasMore=false;
+          this.$apply();
+        }
+        wx.hideLoading();
+      }).catch(err => {
+        console.log(err);
+        wx.hideLoading();
+      });
+
+  }
+async getSearchList(value){
+  wx.showLoading({title:'加载中...'});
+  this.hasMore=true;
+let resBoard=await api.totalBoard({query:{q:value,start:(this.page - 1) * this.size,count:this.size}},'search');
+  wx.hideLoading();
+this.$apply();
+
+return resBoard.data.subjects;
+
+}
+  onReachBottom() {
+    this.loadMore();
+  }
+  onLoad() {
+
+  }
 }
 </script>
 <style lang='less'>
-
+page {
+  height: 100%;
+  background: #eee;
+}
+.container {
+  width: 100%;
+  height: 100%;
+  background: #eee;
+  .input {
+    width: 100%;
+    height: 80rpx;
+    padding: 10rpx 30rpx;
+    box-sizing: border-box;
+    border-bottom: 2rpx solid #eee;
+    background: #fff;
+  }
+  .list {
+    display: flex;
+    width: 100%;
+    margin-bottom: 20rpx;
+    padding: 0 20rpx;
+    box-sizing: border-box;
+    box-shadow: 2rpx 2rpx 4rpx rgba(0, 0, 0, 0.2);
+    justify-content: space-between;
+    border-top: 2rpx solid #ddd;
+    background: #fff;
+    .list-left {
+      display: flex;
+      height: 350rpx;
+      align-items: center;
+      .film-cover {
+        width: 200rpx;
+        height: 300rpx;
+      }
+      .descripe {
+        display: flex;
+        width: 400rpx;
+        height: 300rpx;
+        margin-left: 20rpx;
+        flex-direction: column;
+        .film-title {
+          font-size: 36rpx;
+          height: 80rpx;
+          line-height: 80rpx;
+          font-weight: 600;
+          color: #555;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .film-time {
+          height: 80rpx;
+          line-height: 80rpx;
+          color: #666;
+        }
+        .film-director {
+          height: 80rpx;
+          line-height: 80rpx;
+          color: #999;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+    .list-right {
+      display: flex;
+      height: 300rpx;
+      align-items: center;
+      .film-score {
+        width: 60rpx;
+        height: 60rpx;
+        background: rgb(29, 191, 255);
+        border-radius: 10rpx;
+        text-align: center;
+        line-height: 60rpx;
+        color: #fff;
+        font-weight: 600;
+      }
+    }
+  }
+  .tips {
+    width: 100%;
+    height: 40rpx;
+    .tips-item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .tips-img {
+      height: 40rpx;
+      width: 40rpx;
+    }
+  }
+}
 </style>
